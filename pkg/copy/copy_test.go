@@ -64,10 +64,8 @@ func TestCopy(t *testing.T) {
 	destinationFile, _ := os.CreateTemp("", "")
 
 	defer func() {
-
 		sourceFile.Close()
 		destinationFile.Close()
-		fmt.Print("Defer closing TestCopy")
 	}()
 
 	t.Run("Given a invalid source When trying to copy Then should return an error.", func(t *testing.T) {
