@@ -27,3 +27,9 @@ go test ./... -v
 GOARCH=amd64 go build -ldflags "-X 'main.Version=0.0.1' -X 'main.BuildTime=$(date)' -X 'main.Description=Copy files around'" -o build/gcopy ./cmd/gcopy/
 
 ```
+
+### Build with make
+Review the [Makefile](./Makefile) to see the options
+```
+make all
+```
