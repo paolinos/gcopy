@@ -1,11 +1,19 @@
 # GCopy
 
-This project writed in Golang, it copies files (small or larges)
-With this in mind, we're going to face some challenges:
-- copy small files
-- copy large files
-- copy files by network
-- copy files by network with networking issues
+This project is written in Golang and focuses on building a robust utility for copying files of various sizes and across different environments.
+
+**Goals and Challenges**  
+The project aims to tackle several real-world scenarios:
+- Copying small files efficiently
+- Handling large file transfers with stability
+- Transferring files over a network
+- Managing file transfers under unreliable network conditions
+
+
+**How to use it**
+```sh
+gcopy [source] [destination]
+```
 
 
 ### Tests

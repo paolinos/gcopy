@@ -13,7 +13,7 @@ type CopyOptions struct {
 }
 
 // TODO: Change this to have dynamic chunk sizes
-const chunkSize = 1024 * 1024 // 1MB
+const chunkSize = 1024 * 1024 * 100 // 1MB
 
 var ErrSourcePath = errors.New("the source path is invalid")
 var ErrDestinationPath = errors.New("the destination path is invalid")
@@ -22,6 +22,7 @@ var ErrUnexpected = errors.New("Unexpected error")
 var osOpen = os.Open
 var osCreate = os.Create
 
+// Deprecated: use CopyPath instead
 func CopyFromTo(options CopyOptions) (CopyResult, error) {
 
 	result := copyResult{
@@ -47,12 +48,14 @@ func CopyFromTo(options CopyOptions) (CopyResult, error) {
 		return result, ErrDestinationPath
 	}
 
-	err = copyChunks(srcFile, dstFile)
-	if err != nil {
-		return result, err
+	// TODO: review this part
+	copyResult := readAndCopy(srcFile, dstFile)
+	result.copiedFiles = copyResult.files
+	result.copiedFolders = copyResult.folders
+	if copyResult.HasError() {
+		// TODO: review how we can return errors
+		return result, errors.New(copyResult.errors[0])
 	}
-
-	result.copiedFiles++
 
 	return result, nil
 }
