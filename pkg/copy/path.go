@@ -8,6 +8,8 @@ import (
 	"github.com/paolinos/gcopy/pkg/analyzer"
 )
 
+var filepathDir = filepath.Dir
+
 // Copy all files from folder
 func copyFolderData(source string, destination string, files []analyzer.FileInfo) error {
 
@@ -30,7 +32,7 @@ func copyFolderData(source string, destination string, files []analyzer.FileInfo
 
 func copyFile(source string, destination string) error {
 
-	destinationFolder := filepath.Dir(destination)
+	destinationFolder := filepathDir(destination)
 	err := checkOrCreateFolder(destinationFolder)
 	if err != nil {
 		return err

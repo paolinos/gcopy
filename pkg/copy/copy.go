@@ -20,3 +20,4 @@ var ErrUnexpected = errors.New("Unexpected error")
 
 var osOpen = os.Open
 var osCreate = os.Create
+var osStat = os.Stat
