@@ -8,6 +8,7 @@ import (
 	"github.com/paolinos/gcopy/pkg/analyzer"
 )
 
+// Copy all files from folder
 func copyFolderData(source string, destination string, files []analyzer.FileInfo) error {
 
 	err := checkOrCreateFolder(destination)
@@ -18,7 +19,7 @@ func copyFolderData(source string, destination string, files []analyzer.FileInfo
 	for _, file := range files {
 		filename := strings.Replace(file.Path, source, "", 1)
 		dstPath := filepath.Join(destination, filename)
-		err := copyChunksFromPath(file.Path, dstPath)
+		err := copyChunksFromSource(file.Path, dstPath)
 		if err != nil {
 			return err
 		}
@@ -27,8 +28,32 @@ func copyFolderData(source string, destination string, files []analyzer.FileInfo
 	return nil
 }
 
+func copyFile(source string, destination string) error {
+
+	destinationFolder := filepath.Dir(destination)
+	err := checkOrCreateFolder(destinationFolder)
+	if err != nil {
+		return err
+	}
+
+	err = copyChunksFromSource(source, destination)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Copy path using the analysis
 func CopyPath(data analyzer.AnalyzeResult) {
+
+	if len(data.Folders) == 0 && data.TotalFiles == 1 {
+		// Copy file from to
+		err := copyFile(data.Source, data.Destination)
+		if err != nil {
+			fmt.Printf("Error trying to copy file from:%s; to:%s; with error:%s", data.Source, data.Destination, err)
+		}
+		return
+	}
 
 	for _, folder := range data.Folders {
 		folderName := filepath.Base(folder.Path)

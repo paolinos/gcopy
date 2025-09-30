@@ -68,8 +68,23 @@ func AnalyzePath(source string, destination string) (AnalyzeResult, error) {
 		Destination: filepath.Join(destination),
 	}
 
+	sourcePath, err := os.Stat(res.Source)
+	if err != nil {
+		return res, err
+	}
+
+	// File
+	if !sourcePath.IsDir() {
+		res.TotalFiles = 1
+		res.TotalSize = sourcePath.Size()
+		sizeReadable := getSizeReadable(res.TotalSize)
+		res.SizeReadable = sizeReadable
+		return res, nil
+	}
+
+	// Folder
 	var currentFolder = FolderInfo{}
-	err := filepathWalk(res.Source, func(p string, info os.FileInfo, err error) error {
+	err = filepathWalk(res.Source, func(p string, info os.FileInfo, err error) error {
 
 		if err != nil {
 			return err
