@@ -8,9 +8,9 @@ import (
 // check if folder exist if not create it
 func checkOrCreateFolder(path string) error {
 	p := filepath.Join(path)
-	if _, err := osStat(p); os.IsNotExist(err) {
+	if _, err := osStat(p); osIsNotExist(err) {
 
-		err := os.Mkdir(p, os.ModePerm)
+		err := osMkdir(p, os.ModePerm)
 		return err
 	}
 	return nil

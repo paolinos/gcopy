@@ -18,6 +18,8 @@ const chunkSize = 1024 * 1024 * 100 // 100MB
 var osOpen = os.Open
 var osCreate = os.Create
 var osStat = os.Stat
+var osMkdir = os.Mkdir
+var osIsNotExist = os.IsNotExist
 
 // Copy chunks from source to destination
 func copyChunksFromSource(srcFilePath string, dstFilePath string) error {
