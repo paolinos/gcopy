@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/paolinos/gcopy/internal"
 	"github.com/paolinos/gcopy/pkg/analyzer"
 	"github.com/paolinos/gcopy/pkg/copy"
 )
@@ -24,28 +25,17 @@ const (
 	Bold   = "\033[1m"
 )
 
-const PROMPT_HELP = `
-GCopy (v %s) tool is used to copy files/folders
-%s
-
-Usage:
-
-	gcopy [source] [destination]
-`
-
 func main() {
-
-	// TODO: move this validation of the cmd
-	args := os.Args[1:]
-	if len(args) != 2 {
-
-		fmt.Printf(PROMPT_HELP, Version, Description)
+	options, err := internal.GetAppOptions()
+	if err != nil {
+		fmt.Println(err)
+		fmt.Println(internal.GetHelper(Version, Description))
 		os.Exit(0)
 	}
 
 	start := time.Now()
 
-	res, err := analyzer.AnalyzePath(args[0], args[1])
+	res, err := analyzer.AnalyzePath(options.Source, options.Destination)
 	if err != nil {
 		fmt.Printf("%s%sError:%s\n %s \n -----\n%s", Red, Bold, Bold, err, Reset)
 		os.Exit(0)
