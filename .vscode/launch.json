@@ -13,9 +13,11 @@
             "program": "${workspaceFolder}/cmd/gcopy",
             "args": [
                 // Copy folder
-                //"${workspaceFolder}/tmp", "${workspaceFolder}/tempA"
+                //"-chunks=100", "${workspaceFolder}/tmp", "${workspaceFolder}/tempA"
                 // Copy file
-                "${workspaceFolder}/tmp/images.jpeg","${workspaceFolder}/tmpA/img.jpeg"
+                //"-chunks=100", "${workspaceFolder}/tmp/images.jpeg","${workspaceFolder}/tmpA/img.jpeg"
+                // Invalid
+                "-chunks=100", "${workspaceFolder}/tmp/images.jpeg"
             ]
         }
     ]

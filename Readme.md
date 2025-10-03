@@ -18,7 +18,9 @@ gcopy [source] [destination]
 
 ### Tests
 ```sh
-go test ./... -v
+go test -v ./... 
+
+go test -cover -race ./...
 ```
 
 

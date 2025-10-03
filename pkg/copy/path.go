@@ -11,7 +11,7 @@ import (
 var filepathDir = filepath.Dir
 
 // Copy all files from folder
-func copyFolderData(source string, destination string, files []analyzer.FileInfo) error {
+func copyFolderData(source string, destination string, files []analyzer.FileInfo, chunkSize int64) error {
 
 	err := checkOrCreateFolder(destination)
 	if err != nil {
@@ -21,7 +21,7 @@ func copyFolderData(source string, destination string, files []analyzer.FileInfo
 	for _, file := range files {
 		filename := strings.Replace(file.Path, source, "", 1)
 		dstPath := filepath.Join(destination, filename)
-		err := copyChunksFromSource(file.Path, dstPath)
+		err := copyChunksFromSource(file.Path, dstPath, chunkSize)
 		if err != nil {
 			return err
 		}
@@ -30,7 +30,7 @@ func copyFolderData(source string, destination string, files []analyzer.FileInfo
 	return nil
 }
 
-func copyFile(source string, destination string) error {
+func copyFile(source string, destination string, chunkSize int64) error {
 
 	destinationFolder := filepathDir(destination)
 	err := checkOrCreateFolder(destinationFolder)
@@ -38,7 +38,7 @@ func copyFile(source string, destination string) error {
 		return err
 	}
 
-	err = copyChunksFromSource(source, destination)
+	err = copyChunksFromSource(source, destination, chunkSize)
 	if err != nil {
 		return err
 	}
@@ -46,11 +46,11 @@ func copyFile(source string, destination string) error {
 }
 
 // Copy path using the analysis
-func CopyPath(data analyzer.AnalyzeResult) {
+func CopyPath(data analyzer.AnalyzeResult, chunkSize int64) {
 
 	if len(data.Folders) == 0 && data.TotalFiles == 1 {
 		// Copy file from to
-		err := copyFile(data.Source, data.Destination)
+		err := copyFile(data.Source, data.Destination, chunkSize)
 		if err != nil {
 			fmt.Printf("Error trying to copy file from:%s; to:%s; with error:%s", data.Source, data.Destination, err)
 		}
@@ -63,7 +63,7 @@ func CopyPath(data analyzer.AnalyzeResult) {
 		d := strings.Replace(folder.Path, data.Source, data.Destination, 1)
 		// TODO: remove fmt.Printf
 		fmt.Printf(" - Folder -> Full path:%s; Folder name:%s; Destination path: %s\n", folder.Path, folderName, d)
-		err := copyFolderData(folder.Path, d, folder.Files)
+		err := copyFolderData(folder.Path, d, folder.Files, chunkSize)
 		if err != nil {
 			fmt.Printf("Error trying to copy from:%s; to:%s; with error:%s", folder.Path, d, err)
 		}
