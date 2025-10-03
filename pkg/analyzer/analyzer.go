@@ -37,7 +37,7 @@ type AnalyzeResult struct {
 
 var filepathWalk = filepath.Walk
 
-func getSizeReadable(size int64) string {
+func GetSizeReadable(size int64) string {
 	n := float64(size)
 	var power = float64(1 << 10)
 	for _, unit := range []string{"B", "KB", "MB", "GB", "TB", "PB"} {
@@ -77,7 +77,7 @@ func AnalyzePath(source string, destination string) (AnalyzeResult, error) {
 	if !sourcePath.IsDir() {
 		res.TotalFiles = 1
 		res.TotalSize = sourcePath.Size()
-		sizeReadable := getSizeReadable(res.TotalSize)
+		sizeReadable := GetSizeReadable(res.TotalSize)
 		res.SizeReadable = sizeReadable
 		return res, nil
 	}
@@ -92,7 +92,7 @@ func AnalyzePath(source string, destination string) (AnalyzeResult, error) {
 
 		if info.IsDir() {
 			if currentFolder.Path != "" {
-				currentFolder.SizeReadable = getSizeReadable(currentFolder.Size)
+				currentFolder.SizeReadable = GetSizeReadable(currentFolder.Size)
 				res.Folders = append(res.Folders, currentFolder)
 
 				res.TotalSize += currentFolder.Size
@@ -113,7 +113,7 @@ func AnalyzePath(source string, destination string) (AnalyzeResult, error) {
 		return nil
 	})
 
-	res.SizeReadable = getSizeReadable(res.TotalSize)
+	res.SizeReadable = GetSizeReadable(res.TotalSize)
 
 	return res, err
 }
