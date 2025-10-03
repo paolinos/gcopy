@@ -59,7 +59,7 @@ Time: %f
 	}
 
 	start = time.Now()
-	copy.CopyPath(res)
+	copy.CopyPath(res, options.Chunks)
 	deltaT = time.Since(start)
 
 	// TODO: improve result message

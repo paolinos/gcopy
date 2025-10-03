@@ -10,6 +10,7 @@ import (
 
 const validFilePath = "./file"
 const invalidFilePath = "unknown_file"
+const DEFAULT_SIZE = 100
 
 var ErrUnexpected = errors.New("Unexpected error")
 var ErrInvalidPath = errors.New("Invalid path")
@@ -73,7 +74,7 @@ func TestCopy(t *testing.T) {
 		var ErrSourcePath = errors.New("the source path is invalid")
 		mockOpen(ErrSourcePath)
 
-		err := copyChunksFromSource(invalidFilePath, destinationFile.Name())
+		err := copyChunksFromSource(invalidFilePath, destinationFile.Name(), DEFAULT_SIZE)
 
 		expectError(t, err, ErrSourcePath)
 	})
@@ -83,7 +84,7 @@ func TestCopy(t *testing.T) {
 		mockOpen(sourceFile)
 		mockCreate(ErrDestinationPath)
 
-		err := copyChunksFromSource(sourceFile.Name(), invalidFilePath)
+		err := copyChunksFromSource(sourceFile.Name(), invalidFilePath, DEFAULT_SIZE)
 
 		expectError(t, err, ErrDestinationPath)
 	})
@@ -92,7 +93,7 @@ func TestCopy(t *testing.T) {
 		mockOpen(sourceFile)
 		mockCreate(destinationFile)
 
-		err := copyChunksFromSource(sourceFile.Name(), destinationFile.Name())
+		err := copyChunksFromSource(sourceFile.Name(), destinationFile.Name(), DEFAULT_SIZE)
 		if err != nil {
 			t.Errorf("Found an unexpected error %s", err)
 		}

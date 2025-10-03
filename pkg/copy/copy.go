@@ -12,9 +12,6 @@ type CopyOptions struct {
 	Override    bool
 }
 
-// TODO: Change this to have dynamic chunk sizes
-const chunkSize = 1024 * 1024 * 100 // 100MB
-
 var osOpen = os.Open
 var osCreate = os.Create
 var osStat = os.Stat
@@ -22,7 +19,7 @@ var osMkdir = os.Mkdir
 var osIsNotExist = os.IsNotExist
 
 // Copy chunks from source to destination
-func copyChunksFromSource(srcFilePath string, dstFilePath string) error {
+func copyChunksFromSource(srcFilePath string, dstFilePath string, chunkSize int64) error {
 
 	source, err := osOpen(srcFilePath)
 	if err != nil {
