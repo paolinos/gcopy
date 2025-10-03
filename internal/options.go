@@ -15,8 +15,8 @@ type AppOptions struct {
 	Chunks      int64
 }
 
-const DEFAULT_CHUNKS_SIZE = 1024 * 1024 * 100 // 100MB
-const PROMPT_HELP = `
+const default_chunks_bytes = 1024 * 1024 * 100 // 100MB
+const prompt_help = `
 GCopy (v %s) tool is used to copy files/folders
 %s
 
@@ -25,19 +25,20 @@ Usage:
 	gcopy [options] [source] [destination]
 
 Options:
-	-chunks				%s			
+	-chunks				%s
+	-o
 
 `
 
-var chunkOptions = fmt.Sprintf("Chunk size to copy files expressed in bytes. Default value:%d(%s)", DEFAULT_CHUNKS_SIZE, analyzer.GetSizeReadable(DEFAULT_CHUNKS_SIZE))
+var chunkOptions = fmt.Sprintf("Chunk size to copy files expressed in bytes. Default value:%d(%s)", default_chunks_bytes, analyzer.GetSizeReadable(default_chunks_bytes))
 var ErrMissingArguments = errors.New("invalid arguments to run the program")
 
 func GetHelper(version string, description string) string {
-	return fmt.Sprintf(PROMPT_HELP, version, description, chunkOptions)
+	return fmt.Sprintf(prompt_help, version, description, chunkOptions)
 }
 
 func GetAppOptions() (AppOptions, error) {
-	chunks := flag.Int64("chunks", DEFAULT_CHUNKS_SIZE, fmt.Sprintf("chunk size to copy files expressed in bytes. default value %d (%s)", DEFAULT_CHUNKS_SIZE, analyzer.GetSizeReadable(DEFAULT_CHUNKS_SIZE)))
+	chunks := flag.Int64("chunks", default_chunks_bytes, chunkOptions)
 	flag.Parse()
 
 	args := flag.Args()
