@@ -3,30 +3,15 @@ package copy
 import (
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"testing"
 )
 
-const validFilePath = "./file"
 const invalidFilePath = "unknown_file"
 const DEFAULT_SIZE = 100
 
-var ErrUnexpected = errors.New("Unexpected error")
-var ErrInvalidPath = errors.New("Invalid path")
-
-type mockFile struct {
-	os.File
-}
-
-type otherMock struct {
-	io.Reader
-}
-
-func (m *mockFile) Close() error {
-	return nil
-}
-func (m *otherMock) Close() error { return nil }
+var ErrUnexpected = errors.New("unexpected error")
+var ErrInvalidPath = errors.New("invalid path")
 
 // Override the osOpen function v could be `error` or `os.File`. you can use os.CreateTemp("", "data") to create a temp file
 func mockOpen(v interface{}) {
