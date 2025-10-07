@@ -25,10 +25,13 @@ func copyChunksFromSource(srcFilePath string, dstFilePath string, chunkSize int6
 	if err != nil {
 		return err
 	}
+	defer source.Close()
+
 	destination, err := osCreate(dstFilePath)
 	if err != nil {
 		return err
 	}
+	defer destination.Close()
 
 	buf := make([]byte, chunkSize)
 
