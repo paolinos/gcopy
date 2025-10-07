@@ -82,37 +82,46 @@ func AnalyzePath(source string, destination string) (AnalyzeResult, error) {
 		return res, nil
 	}
 
-	// Folder
-	var currentFolder = FolderInfo{}
-	err = filepathWalk(res.Source, func(p string, info os.FileInfo, err error) error {
+	// Folders
+	folders := make(map[string]FolderInfo)
+	getFolderInfo := func(path string) *FolderInfo {
+		f, ok := folders[path]
+		if !ok {
+			f = FolderInfo{
+				Path:  path,
+				Files: []FileInfo{},
+			}
+			folders[path] = f
+		}
+		return &f
+	}
 
+	err = filepathWalk(res.Source, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if info.IsDir() {
-			if currentFolder.Path != "" {
-				currentFolder.SizeReadable = GetSizeReadable(currentFolder.Size)
-				res.Folders = append(res.Folders, currentFolder)
+		if !info.IsDir() {
+			folder := filepath.Dir(p)
+			currentFolder := getFolderInfo(folder)
 
-				res.TotalSize += currentFolder.Size
-				res.TotalFiles += len(currentFolder.Files)
-			}
-			currentFolder = FolderInfo{
-				Path:  p,
-				Files: []FileInfo{},
-			}
-		} else {
 			bytes := info.Size()
 			currentFolder.Size += bytes
 			currentFolder.Files = append(currentFolder.Files, FileInfo{
 				Path: p,
 				Size: bytes,
 			})
+
+			folders[currentFolder.Path] = *currentFolder
 		}
 		return nil
 	})
 
+	for _, f := range folders {
+		res.Folders = append(res.Folders, f)
+		res.TotalSize += f.Size
+		res.TotalFiles += len(f.Files)
+	}
 	res.SizeReadable = GetSizeReadable(res.TotalSize)
 
 	return res, err
