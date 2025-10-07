@@ -59,7 +59,10 @@ Time: %f
 	}
 
 	start = time.Now()
-	copy.CopyPath(res, options.Chunks)
+	// TODO: deprecated
+	//copy.CopyPath(res, options.Chunks)
+	cm := copy.NewCopyManager()
+	cm.Run(res, options.Chunks)
 	deltaT = time.Since(start)
 
 	// TODO: improve result message
