@@ -20,6 +20,11 @@ mac-darwin:
 mac-arm:
 	GOOS=darwin GOARCH=amd64 go build -ldflags="$(LDFLAGS)" -o build/$(APP_NAME)-mac-arm64 ./cmd/gcopy/
 
+build: all
+
+test:
+	go test ./... -v
+
 clean:
 	rm -f build/$(APP_NAME)-windows-amd64.exe build/$(APP_NAME)-linux-amd64 build/$(APP_NAME)-mac-amd64 build/$(APP_NAME)-mac-arm64
 
