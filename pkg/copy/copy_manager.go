@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
-	"strings"
 	"sync"
 
 	"github.com/paolinos/gcopy/pkg/analyzer"
@@ -98,15 +97,14 @@ func (c *CopyManager) Run(data analyzer.AnalyzeResult, chunkSize int64) {
 		}(i)
 	}
 
-	//c.files = append(c.files, fileProcess{Source: source, Destination: destination})
+
 	for _, folder := range data.Folders {
-		d := strings.Replace(folder.Path, data.Source, data.Destination, 1)
-		/*err := checkOrCreateFolder(data.Destination)
+		d, _ := filepath.Rel(data.Source, folder.Path)
+		err := checkOrCreateFolder(data.Destination)
 		if err != nil {
-			// TODO: need to move to other level
-			fmt.Printf("Error to create folder")
+			fmt.Printf("Error to create folder: %v\n", err)
 			continue
-		}*/
+		}
 
 		for _, file := range folder.Files {
 			filename := filepath.Base(file.Path)

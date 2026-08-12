@@ -13,7 +13,7 @@ func TestGetSizeFormatted(t *testing.T) {
 
 		expected := fmt.Sprintf("%dB", size)
 		if res != expected {
-			t.Errorf("Expected ")
+			t.Errorf("Expected %s, got %s", expected, res)
 		}
 	})
 
@@ -23,7 +23,7 @@ func TestGetSizeFormatted(t *testing.T) {
 
 		expected := "1KB"
 		if res != expected {
-			t.Errorf("Expected ")
+			t.Errorf("Expected %s, got %s", expected, res)
 		}
 	})
 
@@ -33,7 +33,7 @@ func TestGetSizeFormatted(t *testing.T) {
 
 		expected := "1.5KB"
 		if res != expected {
-			t.Errorf("Expected ")
+			t.Errorf("Expected %s, got %s", expected, res)
 		}
 	})
 

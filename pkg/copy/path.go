@@ -19,7 +19,7 @@ func copyFolderData(source string, destination string, files []analyzer.FileInfo
 	}
 
 	for _, file := range files {
-		filename := strings.Replace(file.Path, source, "", 1)
+		filename, _ := filepath.Rel(source, file.Path)
 		dstPath := filepath.Join(destination, filename)
 		err := copyChunksFromSource(file.Path, dstPath, chunkSize)
 		if err != nil {

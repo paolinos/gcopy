@@ -59,12 +59,10 @@ Time: %f
 	}
 
 	start = time.Now()
-	// TODO: deprecated
-	//copy.CopyPath(res, options.Chunks)
 	cm := copy.NewCopyManager()
 	cm.Run(res, options.Chunks)
 	deltaT = time.Since(start)
 
 	// TODO: improve result message
-	fmt.Printf("Total files to copied: %d, size:%s, Time:%f seconds, error:%s", res.TotalFiles, res.SizeReadable, deltaT.Seconds(), err)
+	fmt.Printf("Total files copied: %d, size:%s, Time:%f seconds, error:%s", res.TotalFiles, res.SizeReadable, deltaT.Seconds(), err)
 }
