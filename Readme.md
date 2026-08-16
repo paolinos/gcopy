@@ -34,8 +34,9 @@ Show up to N files copying simultaneously, each with a progress bar and percenta
 source: ~/tmp/folder
 destination: ~/ext
 Total: 3 / 10 files copied
-file1.txt ▓▓░░░░░░░░  25% 25/100 KB
-file2.log ░░░░░░░░░░   0%  0/5000 KB
+file1.txt       ████████████████████████████████████████████████████████████████████████████░░░    94.5 MiB  15.9 MiB/s 00:06 95%
+file2.log       ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░    5120 MiB  0.00 MiB/s 00:00 0%
+{FILE_NAME}     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░    {FILE_SIZE} MiB {Transfer rate} MiB/s {Time} {Percentage}%
 ```
 - Progress bar uses ASCII-safe characters (█ filled, ░ empty) for terminal compatibility
 - Update progress every N bytes or on newline flush to prevent interleaved output
@@ -44,6 +45,11 @@ file2.log ░░░░░░░░░░   0%  0/5000 KB
 ### CLI Flags
 | Flag	        | Default           |	Description
 | --parallel	| 5	                | Max concurrent file transfers
+| --chunks      | 0 (auto)          | Number of chunks for parallel copying
+| --check       | false             | Validate each file's source and destination sizes after copy
+| --skip        | false             | Skip existing files at the destination without overwriting
+| --force       | false             | Overwrite all existing files at the destination
+| --show, -n    | 5                 | Number of files to display in results summary
 
 ### Exit Codes
 0: All copies completed successfully

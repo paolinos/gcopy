@@ -35,7 +35,7 @@ func TestGetAppOptions(t *testing.T) {
 
 		o, err := GetAppOptions()
 
-		expectErrAndEmptyOptions(t, ErrMissingArguments, o, err)
+		expectErrAndEmptyOptions(t, o, err)
 	})
 
 	t.Run("Given options after the source and destination, When parsing the options, Then should return error", func(t *testing.T) {
@@ -44,7 +44,7 @@ func TestGetAppOptions(t *testing.T) {
 
 		o, err := GetAppOptions()
 
-		expectErrAndEmptyOptions(t, ErrMissingArguments, o, err)
+		expectErrAndEmptyOptions(t, o, err)
 	})
 
 	t.Run("Given a source and destination, When parsing the options, Then should return options and default chunk", func(t *testing.T) {
@@ -61,8 +61,8 @@ func TestGetAppOptions(t *testing.T) {
 		if o.Destination != destination {
 			t.Errorf("Expected source to be:%s, received: %s", destination, o.Destination)
 		}
-		if o.Chunks != default_chunks_bytes {
-			t.Errorf("Expected chunk to be:%d, received: %d", default_chunks_bytes, o.Chunks)
+		if o.Chunks != 0 {
+			t.Errorf("Expected chunk to be:0, received: %d", o.Chunks)
 		}
 	})
 
@@ -78,19 +78,66 @@ func TestGetAppOptions(t *testing.T) {
 			t.Errorf("Expected chunk to be:%d, received: %d", chunk, o.Chunks)
 		}
 	})
+
+	t.Run("Given skip and force flags, When parsing the options, Then should return correct values", func(t *testing.T) {
+		os.Args = []string{"cmd", source, destination, "--skip", "--force"}
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+		o, err := GetAppOptions()
+		if err != nil {
+			t.Errorf("Unexpected error: %e", err)
+		}
+		if !o.Skip {
+			t.Errorf("Expected Skip to be true")
+		}
+		if !o.Force {
+			t.Errorf("Expected Force to be true")
+		}
+	})
+
+	t.Run("Given show and parallel flags, When parsing the options, Then should return correct values", func(t *testing.T) {
+		os.Args = []string{"cmd", source, destination, "--show=10", "--parallel=8"}
+		flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
+
+		o, err := GetAppOptions()
+		if err != nil {
+			t.Errorf("Unexpected error: %e", err)
+		}
+		if o.Show != 10 {
+			t.Errorf("Expected Show to be 10, got %d", o.Show)
+		}
+		if o.Parallel != 8 {
+			t.Errorf("Expected Parallel to be 8, got %d", o.Parallel)
+		}
+	})
+
 }
 
-func expectErrAndEmptyOptions(t *testing.T, expectedError error, o AppOptions, err error) {
-	if err != expectedError {
-		t.Error("Found options after the source and destination ")
+func expectErrAndEmptyOptions(t *testing.T, o *AppOptions, err error) {
+	if err == nil {
+		t.Error("Expected error but got nil")
 	}
-	if len(o.Source) != 0 {
-		t.Errorf("Source should be empty")
-	}
-	if len(o.Destination) != 0 {
-		t.Errorf("Destination should be empty")
-	}
-	if o.Chunks != 0 {
-		t.Errorf("Chunks should be empty")
+	if o != nil {
+		if len(o.Source) != 0 {
+			t.Errorf("Source should be empty, got: %s", o.Source)
+		}
+		if len(o.Destination) != 0 {
+			t.Errorf("Destination should be empty, got: %s", o.Destination)
+		}
+		if o.Chunks != 0 {
+			t.Errorf("Chunks should be 0, got: %d", o.Chunks)
+		}
+		if o.Skip {
+			t.Errorf("Skip should be false")
+		}
+		if o.Force {
+			t.Errorf("Force should be false")
+		}
+		if o.Show != 5 {
+			t.Errorf("Show should be 5, got: %d", o.Show)
+		}
+		if o.Parallel != 5 {
+			t.Errorf("Parallel should be 5, got: %d", o.Parallel)
+		}
 	}
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/paolinos/gcopy/internal"
@@ -16,53 +17,125 @@ var (
 	BuildTime   string
 )
 
-const (
-	Reset  = "\033[0m"
-	Red    = "\033[31m"
-	Green  = "\033[32m"
-	Yellow = "\033[33m"
-	Blue   = "\033[34m"
-	Bold   = "\033[1m"
+var (
+	reset  = "\033[0m"
+	red    = "\033[31m"
+	green  = "\033[32m"
+	bold   = "\033[1m"
 )
+
+func init() {
+	if !copy.IsTerminal() || os.Getenv("NO_COLOR") != "" {
+		reset, red, green, bold = "", "", "", ""
+	}
+}
+
+func getFileSize(path string) (int64, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return 0, err
+	}
+	return info.Size(), nil
+}
+
+func printUsage() {
+	fmt.Printf(`gcopy - Cross-platform file copy utility
+
+Usage:
+  gcopy [flags] <source> <destination>
+  gcopy --help
+
+Flags:
+  --source, -s      Source path to copy from.
+  --destination, -d Destination path to copy to.
+  --parallel, -p    Max concurrent file transfers (default: 5).
+  --chunks, -c      Number of chunks for parallel copying (default: 32KB).
+  --check           Validate each file's source and destination sizes after copy.
+  --skip            Skip existing files at the destination without overwriting.
+  --force           Overwrite all existing files at the destination.
+  --show, -n        Number of files to display in results summary (default: 5).
+
+Exit Codes:
+  0  All copies completed successfully.
+  1  One or more copies failed (partial success acceptable).
+  2  Invalid arguments or configuration errors.
+`)
+}
+
+func printVersion() {
+	fmt.Printf("gcopy %s - %s\n", Version, Description)
+}
 
 func main() {
 	options, err := internal.GetAppOptions()
 	if err != nil {
 		fmt.Println(err)
-		fmt.Println(internal.GetHelper(Version, Description))
-		os.Exit(0)
+		printUsage()
+		os.Exit(2)
 	}
 
 	start := time.Now()
 
 	res, err := analyzer.AnalyzePath(options.Source, options.Destination)
 	if err != nil {
-		fmt.Printf("%s%sError:%s\n %s \n -----\n%s", Red, Bold, Bold, err, Reset)
-		os.Exit(0)
+		fmt.Printf("%s%sError:%s %s\n -----\n", red, bold, reset, err)
+		printUsage()
+		os.Exit(2)
 	}
 
-	deltaT := time.Since(start)
+	fmt.Printf("%sPreparing to copy:%s\n  from: %s\n  to:   %s\n  files: %d  size: %s\n\n",
+		green, reset, res.Source, res.Destination, res.TotalFiles, res.SizeReadable)
 
-	fmt.Printf(`%sPrepare to copy:
-	- from:%s; 
-	- to:%s
-Total Files: %d
-Total Size: %s
-Time: %f
-%s`, Green, res.Source, res.Destination, res.TotalFiles, res.SizeReadable, deltaT.Seconds(), Reset)
+	start = time.Now()
+	cm := copy.NewCopyManager(options.Check, options.Skip, options.Force)
+	cm.Run(res, options.Chunks)
+	elapsed := time.Since(start)
 
-	for _, v := range res.Folders {
-		fmt.Printf("Path %s, Size: %d, SizeReadable: %s, Files to copy: %d,\n", v.Path, v.Size, v.SizeReadable, len(v.Files))
-		for _, f := range v.Files {
-			fmt.Printf("		- Filepath:%s; Size:%d;\n", f.Path, f.Size)
+	// Count failures.
+	errCount := 0
+	for _, r := range cm.Result() {
+		if r.Err != nil {
+			errCount++
 		}
 	}
 
-	start = time.Now()
-	cm := copy.NewCopyManager()
-	cm.Run(res, options.Chunks)
-	deltaT = time.Since(start)
+	// Display results.
+	copy.DisplayResults(res, cm.Result(), cm.Progress(), options.Show)
+	fmt.Println(copy.FormatSummaryLine(res.TotalFiles, res.SizeReadable, elapsed, errCount))
 
-	// TODO: improve result message
-	fmt.Printf("Total files copied: %d, size:%s, Time:%f seconds, error:%s", res.TotalFiles, res.SizeReadable, deltaT.Seconds(), err)
+	// If --check is enabled, validate each file's source and destination sizes.
+	if options.Check {
+		var failures []string
+		for _, result := range cm.Result() {
+			base := filepath.Base(result.SourcePath)
+			if !result.CheckPassed || result.Err != nil {
+				failures = append(failures, fmt.Sprintf("%s: %v", base, result.Err))
+				fmt.Printf("%s%sError:%s %s — %v\n", red, bold, reset, base, result.Err)
+				continue
+			}
+			srcSize, err := getFileSize(result.SourcePath)
+			if err != nil {
+				failures = append(failures, fmt.Sprintf("%s: source stat failed: %v", base, err))
+				fmt.Printf("%s%sError:%s could not stat source %s: %v\n", red, bold, reset, base, err)
+				continue
+			}
+			dstSize, err := getFileSize(result.DestinationPath)
+			if err != nil {
+				failures = append(failures, fmt.Sprintf("%s: dest stat failed: %v", base, err))
+				fmt.Printf("%s%sError:%s could not stat destination %s: %v\n", red, bold, reset, base, err)
+				continue
+			}
+			if srcSize != dstSize {
+				failures = append(failures, fmt.Sprintf("%s: size mismatch src=%d dst=%d", base, srcSize, dstSize))
+				fmt.Printf("%s%sError:%s size mismatch %s (src=%d, dst=%d)\n", red, bold, reset, base, srcSize, dstSize)
+			} else {
+				fmt.Printf("  ✓ %s (%d bytes)\n", base, srcSize)
+			}
+		}
+
+		if len(failures) > 0 {
+			fmt.Printf("\n%s%s%d file(s) failed validation%s\n", red, bold, len(failures), reset)
+			os.Exit(1)
+		}
+	}
 }
