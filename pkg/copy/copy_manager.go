@@ -6,10 +6,11 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/paolinos/gcopy/pkg/analyzer"
+	"github.com/vbauerster/mpb/v7"
+	"github.com/vbauerster/mpb/v7/decor"
 )
 
 type fileProcess struct {
@@ -17,6 +18,7 @@ type fileProcess struct {
 	FolderDestination string
 	Destination       string
 	Progress          *fileProgress
+	Bar               *mpb.Bar
 }
 
 type CopyResult struct {
@@ -29,14 +31,15 @@ type CopyResult struct {
 
 type CopyManager struct {
 	result           []CopyResult
+	resultMu         sync.Mutex
 	progress         []*fileProgress
 	chFileProcessing chan fileProcess
 	wg               sync.WaitGroup
 	check            bool
 	skip             bool
 	force            bool
-	activeCount      atomic.Int32
-	doneCount        atomic.Int32
+	sourcePath       string
+	destinationPath  string
 	totalFiles       int
 }
 
@@ -51,7 +54,7 @@ func NewCopyManager(check, skip, force bool) *CopyManager {
 	}
 }
 
-func (c *CopyManager) copyChunksFromSource(srcFilePath string, dstFilePath string, chunkSize int64, progress *fileProgress) (int64, error) {
+func copyFileChunks(srcFilePath string, dstFilePath string, chunkSize int64, progress *fileProgress, bar ...*mpb.Bar) (int64, error) {
 	source, err := os.Open(srcFilePath)
 	if err != nil {
 		return 0, err
@@ -88,110 +91,51 @@ func (c *CopyManager) copyChunksFromSource(srcFilePath string, dstFilePath strin
 		}
 		copied += int64(n)
 
-		progress.Copied = copied
-		progress.End = time.Now()
+		if len(bar) > 0 && bar[0] != nil {
+			bar[0].IncrBy(n)
+		}
 	}
 
 	return copied, nil
 }
 
-// displayProgress continuously redraws live progress for all active files.
-func (c *CopyManager) displayProgress(stop <-chan struct{}) {
-	if !IsTerminal() {
-		<-stop
-		return
-	}
-
-	fmt.Print("\033[?25l") // hide cursor
-	defer fmt.Print("\033[?25h") // show cursor
-
-	prevLineCount := 0
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-stop:
-			// Final redraw
-			c.redrawProgress(&prevLineCount)
-			return
-		case <-ticker.C:
-			c.redrawProgress(&prevLineCount)
-		}
-	}
-}
-
-func (c *CopyManager) redrawProgress(prevLineCount *int) {
-	active := make([]*fileProgress, 0)
-	for _, fp := range c.progress {
-		if fp.End.IsZero() || fp.Copied < fp.Size {
-			active = append(active, fp)
-		}
-	}
-
-	// Move cursor up to the start of the progress area and clear everything.
-	if *prevLineCount > 0 {
-		fmt.Printf("\033[%dA", *prevLineCount)
-		for i := 0; i < *prevLineCount; i++ {
-			fmt.Print("\033[2K\033[1B")
-		}
-		fmt.Printf("\033[%dA", *prevLineCount)
-	}
-
-	for _, fp := range active {
-		fmt.Printf("\033[2K%s\033[1B", FormatFileLine(fp))
-	}
-	// Move cursor back to start of progress area.
-	if len(active) > 0 {
-		fmt.Printf("\033[%dA", len(active))
-	}
-
-	*prevLineCount = len(active)
-}
-
 func (c *CopyManager) Run(data analyzer.AnalyzeResult, chunkSize int64) {
 	c.totalFiles = data.TotalFiles
-	workerLimit := 10
+	workerLimit := 5
 
-	// Start live progress display.
-	stopDisplay := make(chan struct{})
-	go c.displayProgress(stopDisplay)
+	// Create mpb progress container.
+	p := mpb.New(
+		mpb.WithWidth(getTerminalWidth()),
+		mpb.WithRefreshRate(100*time.Millisecond),
+	)
 
 	for i := 0; i < workerLimit; i++ {
 		go func(id int) {
 			for file := range c.chFileProcessing {
-				c.activeCount.Add(1)
 				result := CopyResult{
 					CheckPassed:     true,
 					SourcePath:      file.Source,
 					DestinationPath: file.Destination,
 				}
 
-				// Only skip if --skip is explicitly set and dest exists.
 				if c.skip {
 					if _, dstErr := os.Stat(file.Destination); dstErr == nil {
 						result.Err = fmt.Errorf("skipped: %s already exists", filepath.Base(file.Destination))
 						result.CheckPassed = false
-						if file.Progress != nil {
-							file.Progress.End = file.Progress.Start
-						}
-						c.result = append(c.result, result)
-						c.activeCount.Add(-1)
-						c.doneCount.Add(1)
+						file.Bar.SetCurrent(file.Progress.Size)
+						c.addResult(result)
 						c.wg.Done()
 						continue
 					}
 				}
 
-				_, err := c.copyChunksFromSource(file.Source, file.Destination, chunkSize, file.Progress)
+				_, err := copyFileChunks(file.Source, file.Destination, chunkSize, file.Progress, file.Bar)
 				if err != nil {
 					result.Err = err
 					result.CheckPassed = false
 				}
 
-				c.result = append(c.result, result)
-				c.activeCount.Add(-1)
-				c.doneCount.Add(1)
+				c.addResult(result)
 				c.wg.Done()
 			}
 		}(i)
@@ -207,17 +151,31 @@ func (c *CopyManager) Run(data analyzer.AnalyzeResult, chunkSize int64) {
 		}
 
 		for _, file := range folder.Files {
-			filename := filepath.Base(file.Path)
-			dstPath := filepath.Join(dstDir, filename)
 			fp := &fileProgress{
 				Filename: file.Path,
 				Size:     file.Size,
-				Start:    time.Now(),
 			}
-			c.progress = append(c.progress, fp)
 
+			name := filepath.Base(file.Path)
+			bar := p.AddBar(file.Size,
+				mpb.BarWidth(getTerminalWidth()-50),
+				mpb.PrependDecorators(
+					decor.Name(name, decor.WC{W: 20}),
+				),
+				mpb.AppendDecorators(
+					decor.Counters(decor.UnitKiB, " % .1f / % .1f"),
+					decor.Percentage(decor.WC{W: 5}),
+				),
+			)
+
+			c.progress = append(c.progress, fp)
 			c.wg.Add(1)
-			c.chFileProcessing <- fileProcess{Source: file.Path, FolderDestination: d, Destination: dstPath, Progress: fp}
+			c.chFileProcessing <- fileProcess{
+				Source:      file.Path,
+				Destination: filepath.Join(dstDir, filepath.Base(file.Path)),
+				Progress:    fp,
+				Bar:         bar,
+			}
 		}
 	}
 
@@ -225,31 +183,54 @@ func (c *CopyManager) Run(data analyzer.AnalyzeResult, chunkSize int64) {
 		fp := &fileProgress{
 			Filename: data.Source,
 			Size:     data.TotalSize,
-			Start:    time.Now(),
 		}
-		c.progress = append(c.progress, fp)
 
+		name := filepath.Base(data.Source)
+		bar := p.AddBar(data.TotalSize,
+			mpb.BarWidth(getTerminalWidth()-50),
+			mpb.PrependDecorators(
+				decor.Name(name, decor.WC{W: 20}),
+			),
+			mpb.AppendDecorators(
+				decor.Counters(decor.UnitKiB, " % .1f / % .1f"),
+				decor.Percentage(decor.WC{W: 5}),
+			),
+		)
+
+		c.progress = append(c.progress, fp)
 		c.wg.Add(1)
-		c.chFileProcessing <- fileProcess{Source: data.Source, Destination: data.Destination, Progress: fp}
+		c.chFileProcessing <- fileProcess{
+			Source:      data.Source,
+			Destination: data.Destination,
+			Progress:    fp,
+			Bar:         bar,
+		}
 	}
 
 	c.wg.Wait()
-	close(stopDisplay)
+	p.Wait()
+}
 
-	// Final clear of progress area.
-	if IsTerminal() && len(c.progress) > 0 {
-		fmt.Printf("\033[%dA", len(c.progress))
-		for i := 0; i < len(c.progress); i++ {
-			fmt.Print("\033[2K\033[1B")
-		}
-		fmt.Printf("\033[%dA", len(c.progress))
-	}
+func (c *CopyManager) addResult(result CopyResult) {
+	c.resultMu.Lock()
+	defer c.resultMu.Unlock()
+	c.result = append(c.result, result)
 }
 
 func (c *CopyManager) Result() []CopyResult {
-	return c.result
+	c.resultMu.Lock()
+	defer c.resultMu.Unlock()
+	out := make([]CopyResult, len(c.result))
+	copy(out, c.result)
+	return out
 }
 
 func (c *CopyManager) Progress() []*fileProgress {
 	return c.progress
+}
+
+func (c *CopyManager) SetHeaderInfo(sourcePath, destinationPath string, totalFiles int, sizeReadable string) {
+	c.sourcePath = sourcePath
+	c.destinationPath = destinationPath
+	c.totalFiles = totalFiles
 }

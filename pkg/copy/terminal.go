@@ -7,14 +7,18 @@ import (
 )
 
 const (
-	defaultTermWidth  = 80
-	progressBarWidth  = 50
-	filenameMinWidth  = 20
-	headerPadding    = 2
-	sizeColumnWidth   = 10
-	speedColumnWidth  = 12
-	pctColumnWidth    = 5
-	timeColumnWidth   = 7
+	defaultTermWidth = 80
+	filenameWidth    = 20
+	sizeColumnWidth  = 10
+	speedColumnWidth = 10
+	timeColumnWidth  = 6
+	minBarWidth      = 10
+
+	// Color codes (used for error messages).
+	reset = "\033[0m"
+	red   = "\033[31m"
+	green = "\033[32m"
+	bold  = "\033[1m"
 )
 
 func getTerminalWidth() int {

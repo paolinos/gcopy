@@ -1,21 +1,16 @@
 package internal
 
 import (
-	"flag"
 	"fmt"
-	"strings"
-)
 
-// GetHelper returns a formatted helper message with version info.
-func GetHelper(version, description string) string {
-	return fmt.Sprintf("gcopy %s - %s", version, description)
-}
+	"github.com/spf13/cobra"
+)
 
 // AppOptions holds all parsed application options.
 type AppOptions struct {
 	Source      string
 	Destination string
-	Chunks     int64
+	Chunks      int64
 	Check       bool
 	Skip        bool
 	Force       bool
@@ -23,46 +18,34 @@ type AppOptions struct {
 	Parallel    int
 }
 
-var errMissingArguments = fmt.Errorf("missing arguments")
+// GetHelper returns a formatted helper message with version info.
+func GetHelper(version, description string) string {
+	return fmt.Sprintf("gcopy %s - %s", version, description)
+}
 
-// GetAppOptions parses command-line flags and returns the populated AppOptions.
-func GetAppOptions() (*AppOptions, error) {
-	o := &AppOptions{}
+// NewRootCmd creates the root cobra command with all flags.
+func NewRootCmd(version, description string) (*cobra.Command, *AppOptions) {
+	opts := &AppOptions{}
 
-	flag.StringVar(&o.Source, "source", "", "Source path to copy from.")
-	flag.StringVar(&o.Destination, "destination", "", "Destination path to copy to.")
-	flag.Int64Var(&o.Chunks, "chunks", 32*1024, "Number of chunks for parallel copying.")
-	flag.BoolVar(&o.Check, "check", false, "Validate each file's source and destination sizes after copy.")
-	flag.BoolVar(&o.Skip, "skip", false, "Skip existing files at the destination without overwriting.")
-	flag.BoolVar(&o.Force, "force", false, "Overwrite all existing files at the destination.")
-	flag.IntVar(&o.Show, "show", 5, "Number of files to display in results summary (default: 5).")
-	flag.IntVar(&o.Parallel, "parallel", 5, "Max concurrent file transfers (default: 5).")
-
-	flag.Parse()
-
-	// If no flags were set but positional args exist, use them as source/destination.
-	if o.Source == "" && o.Destination == "" {
-		args := flag.Args()
-		if len(args) >= 2 {
-			o.Source = args[0]
-			o.Destination = args[1]
-		} else if len(args) == 1 {
-			o.Source = args[0]
-		}
+	cmd := &cobra.Command{
+		Use:   "gcopy [flags] <source> <destination>",
+		Short: description,
+		Long:  GetHelper(version, description),
+		Args:  cobra.ExactArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			opts.Source = args[0]
+			opts.Destination = args[1]
+			return nil
+		},
 	}
 
-	// Validate that source and destination are provided.
-	if o.Source == "" || o.Destination == "" {
-		return nil, fmt.Errorf("missing arguments")
-	}
+	flags := cmd.Flags()
+	flags.Int64Var(&opts.Chunks, "chunks", 32*1024, "Number of chunks for parallel copying.")
+	flags.BoolVar(&opts.Check, "check", false, "Validate each file's source and destination sizes after copy.")
+	flags.BoolVar(&opts.Skip, "skip", false, "Skip existing files at the destination without overwriting.")
+	flags.BoolVar(&opts.Force, "force", false, "Overwrite all existing files at the destination.")
+	flags.IntVar(&opts.Show, "show", 5, "Number of files to display in results summary.")
+	flags.IntVar(&opts.Parallel, "parallel", 5, "Max concurrent file transfers.")
 
-	// Check if options come after positional arguments (invalid usage).
-	args := flag.Args()
-	for i, arg := range args {
-		if i >= 2 && !strings.HasPrefix(arg, "-") {
-			return nil, fmt.Errorf("options after source and destination are not allowed")
-		}
-	}
-
-	return o, nil
+	return cmd, opts
 }

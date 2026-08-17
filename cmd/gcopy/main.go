@@ -12,23 +12,15 @@ import (
 )
 
 var (
-	Version     string = "0.0.1"
-	Description string
+	Version     = "0.0.1"
+	Description = "Cross-platform file copy utility"
 	BuildTime   string
-)
 
-var (
-	reset  = "\033[0m"
-	red    = "\033[31m"
-	green  = "\033[32m"
-	bold   = "\033[1m"
+	reset = "\033[0m"
+	red   = "\033[31m"
+	green = "\033[32m"
+	bold  = "\033[1m"
 )
-
-func init() {
-	if !copy.IsTerminal() || os.Getenv("NO_COLOR") != "" {
-		reset, red, green, bold = "", "", "", ""
-	}
-}
 
 func getFileSize(path string) (int64, error) {
 	info, err := os.Stat(path)
@@ -38,40 +30,14 @@ func getFileSize(path string) (int64, error) {
 	return info.Size(), nil
 }
 
-func printUsage() {
-	fmt.Printf(`gcopy - Cross-platform file copy utility
-
-Usage:
-  gcopy [flags] <source> <destination>
-  gcopy --help
-
-Flags:
-  --source, -s      Source path to copy from.
-  --destination, -d Destination path to copy to.
-  --parallel, -p    Max concurrent file transfers (default: 5).
-  --chunks, -c      Number of chunks for parallel copying (default: 32KB).
-  --check           Validate each file's source and destination sizes after copy.
-  --skip            Skip existing files at the destination without overwriting.
-  --force           Overwrite all existing files at the destination.
-  --show, -n        Number of files to display in results summary (default: 5).
-
-Exit Codes:
-  0  All copies completed successfully.
-  1  One or more copies failed (partial success acceptable).
-  2  Invalid arguments or configuration errors.
-`)
-}
-
-func printVersion() {
-	fmt.Printf("gcopy %s - %s\n", Version, Description)
-}
-
 func main() {
-	options, err := internal.GetAppOptions()
-	if err != nil {
-		fmt.Println(err)
-		printUsage()
+	cmd, options := internal.NewRootCmd(Version, Description)
+
+	if err := cmd.Execute(); err != nil {
 		os.Exit(2)
+	}
+	if options.Source == "" {
+		return
 	}
 
 	start := time.Now()
@@ -79,7 +45,7 @@ func main() {
 	res, err := analyzer.AnalyzePath(options.Source, options.Destination)
 	if err != nil {
 		fmt.Printf("%s%sError:%s %s\n -----\n", red, bold, reset, err)
-		printUsage()
+		cmd.Usage()
 		os.Exit(2)
 	}
 
@@ -88,6 +54,7 @@ func main() {
 
 	start = time.Now()
 	cm := copy.NewCopyManager(options.Check, options.Skip, options.Force)
+	cm.SetHeaderInfo(res.Source, res.Destination, res.TotalFiles, res.SizeReadable)
 	cm.Run(res, options.Chunks)
 	elapsed := time.Since(start)
 
@@ -100,7 +67,7 @@ func main() {
 	}
 
 	// Display results.
-	copy.DisplayResults(res, cm.Result(), cm.Progress(), options.Show)
+	// copy.DisplayResults(res, cm.Result(), cm.Progress(), options.Show)
 	fmt.Println(copy.FormatSummaryLine(res.TotalFiles, res.SizeReadable, elapsed, errCount))
 
 	// If --check is enabled, validate each file's source and destination sizes.

@@ -19,7 +19,7 @@ var osMkdir = os.Mkdir
 var osIsNotExist = os.IsNotExist
 
 // Copy chunks from source to destination
-func copyChunksFromSource(srcFilePath string, dstFilePath string, chunkSize int64) error {
+func copyChunksFromSource(srcFilePath string, dstFilePath string, chunkSize int64, progress *fileProgress) error {
 
 	source, err := osOpen(srcFilePath)
 	if err != nil {

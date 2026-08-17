@@ -59,7 +59,8 @@ func TestCopy(t *testing.T) {
 		var ErrSourcePath = errors.New("the source path is invalid")
 		mockOpen(ErrSourcePath)
 
-		err := copyChunksFromSource(invalidFilePath, destinationFile.Name(), DEFAULT_SIZE)
+		fp := &fileProgress{}
+		err := copyChunksFromSource(invalidFilePath, destinationFile.Name(), DEFAULT_SIZE, fp)
 
 		expectError(t, err, ErrSourcePath)
 	})
@@ -69,7 +70,8 @@ func TestCopy(t *testing.T) {
 		mockOpen(sourceFile)
 		mockCreate(ErrDestinationPath)
 
-		err := copyChunksFromSource(sourceFile.Name(), invalidFilePath, DEFAULT_SIZE)
+		fp := &fileProgress{}
+		err := copyChunksFromSource(sourceFile.Name(), invalidFilePath, DEFAULT_SIZE, fp)
 
 		expectError(t, err, ErrDestinationPath)
 	})
@@ -78,7 +80,8 @@ func TestCopy(t *testing.T) {
 		mockOpen(sourceFile)
 		mockCreate(destinationFile)
 
-		err := copyChunksFromSource(sourceFile.Name(), destinationFile.Name(), DEFAULT_SIZE)
+		fp := &fileProgress{}
+		err := copyChunksFromSource(sourceFile.Name(), destinationFile.Name(), DEFAULT_SIZE, fp)
 		if err != nil {
 			t.Errorf("Found an unexpected error %s", err)
 		}
